@@ -1,0 +1,116 @@
+/*Ranking Widget*/
+.widget_ranking .kf_border{
+    padding: 15px 0;
+}
+.widget_ranking .kf_table li > div:first-child{
+    padding-left: 18px;
+}
+.widget_ranking .kf_table li > div:last-child{
+    padding-right: 18px;
+}
+/*RECENT NEWS WIDGET*/
+.kf_recentnews{
+    float: left;
+    width: 100%;
+    position: relative;
+    margin: 0  0 30px 0;
+}
+.widget .kf_hd1{
+    margin: 0;
+}
+.kf_hd1.margin_0{
+    margin: 0;
+}
+.kf_hd1{
+    float: left;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: #e7eaf0;
+    margin-bottom: 30px;
+}
+.kf_hd1 span{
+    z-index: 1;
+    float: left;
+    width: auto;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    position: relative;
+    line-height: normal;
+    text-transform: uppercase;
+    padding: 11px 35px 12px 20px;
+}
+.kf_hd1 span::before {
+    top: 0;
+    right: 0;
+    z-index: -1;
+    content: "";
+    bottom: auto;
+    height: 100%;
+    width: 2000%;
+    position: absolute;
+    -webkit-transform: skew(-30deg);
+    -moz-transform: skew(-30deg);
+    -ms-transform: skew(-30deg);
+    -o-transform: skew(-30deg);
+    transform: skew(-30deg);
+}
+.kf_hd1 span{
+    font-size: 18px;
+}
+.kf_border{
+    float: left;
+    width: 100%;
+    padding: 30px;
+    border-style:solid;
+    border-width:0 1px 1px;
+    border-color:  #d7d8d8; 
+}
+.kf_border-2{
+    border-color: #f1f1f1;
+    float: left;
+    width: 100%;
+    padding: 0px;
+    border-style:solid;
+    border-width:0 1px 1px;
+}
+.widget .kf_hd1{
+    margin: 0;
+}
+/*Ranking Widget*/
+.widget_ranking .kf_border{
+    padding: 15px 0;
+}
+.widget_nextmatch .kf_border{
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+}
+.widget_tranding_tab .kf_border{
+    padding:0;
+}
+.widget_player .kf_border{
+    padding: 0px;
+}
+.widget_teamnews .kf_border{
+    padding: 22px 30px 30px;
+}
+.kf_topscores li div:last-child, 
+.kf_tabs .kf_table li div:last-child,
+.match_comparison2 .kf_table li div:last-child,
+.match_comparison .kf_table li div:last-child {
+    padding-right: 15px;
+}
+.kf_topscores li div:first-child, 
+.kf_tabs .kf_table li div:first-child,
+.match_comparison2 .kf_table li div:first-child,
+.match_comparison .kf_table li div:first-child {
+    padding-left: 15px;
+}	
+.ticket_button button {
+    background-color: #ffbe00;
+}
+.rss, .lable_1, .btn_icon, .input-btn, .copy_right, .btn-1:hover, .btn_3:hover, .text_2 span, .kf_h5:before, .kf_map:before, .twitter_ticker, .filter_btn:hover, .kode_search:hover, .pp_pic_holder.pp_default, .kf_tags li a:hover, .kf_404_text .btn-1, .widget_instagram a, .widget_ul li:hover, .kf_hd1 span::before, .list_meta li:before, .kf_contct_thumb:hover, .kf_social3 li a:hover, .kf_social2 li a:hover, .kf_top_bar .kode_search, .kode-gallery figcaption a, .roster .slick-arrow:hover, .kf_overview_nav .active a, .kode_header_2 .logo:before, .kode_navigation li:hover > a, .team_comparison_wrap2 button, .kf_contact_meta li:hover span, .kf_roster_dec:hover .text > span, .featured_slider .slick-arrow:hover, .kode-pagination .page-numbers:hover, .kode-pagination .page-numbers.current, .radio_dec input:checked + .radio-value, .input_label input[type="button"]:hover, .kf_ticket2_wrap ul li:hover .ticket_date, .radio_style3 input:checked + .radio-value, .kf_progress1 .progressbars.progress_single, .kf_rangeslider .ui-slider .ui-slider-range, .kf_progress_wrap .kf_progress .progress-bar, .kode_header_2 .kode_navigation li ul li a:hover, .kf_ticket2_wrap ul li:hover .ticket_button button {
+    background-color: #ffbe00;
+}
