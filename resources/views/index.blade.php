@@ -98,13 +98,29 @@
                         <div class="plan-inner">
                             <div class="entry-content">
                                 <ul>
-                                    <?php $posicao = 1;
+                                    <?php
+                                    $posicao = 1;
                                     $rodadaAtual = $status['rodada_atual'];
                                     ?>
                                     @foreach ($tabelaGeral as $key => $apostador)
-                                    <li>{{$posicao}}º
-                                        <img src="{{$apostador[$rodadaAtual]['time']['url_escudo_svg']}}" width="10%"><strong>{{$apostador[$rodadaAtual]['time']['nome']}}</strong>
-                                        <img src="{{$apostador[$rodadaAtual]['time']['foto_perfil']}}" width="10%">{{number_format($apostador['pontuacaoGeral'],2)}}
+                                    <li>
+                                        <div class="row">
+                                            <div class="col-lg-1">
+                                                {{$posicao}}º
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$apostador[$rodadaAtual]['time']['url_escudo_svg']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <strong>{{$apostador[$rodadaAtual]['time']['nome']}}</strong>
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$apostador[$rodadaAtual]['time']['foto_perfil']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-2">
+                                                {{number_format($apostador['pontuacaoGeral'],2)}}
+                                            </div>
+                                        </div>
                                     </li>
                                     <?php $posicao++ ?>
                                     @endforeach
@@ -134,15 +150,31 @@
                         <div class="plan-inner">
                             <div class="entry-content">
                                 <ul>
-                                    <?php $posicao = 1;
+                                    <?php
+                                    $posicaoMes = 1;
                                     $rodadaAtual = $status['rodada_atual'];
                                     ?>
                                     @foreach ($tabelaMensal as $key => $apostador)
-                                    <li>{{$posicao}}º
-                                        <img src="{{$apostador[$rodadaAtual]['time']['url_escudo_svg']}}" width="10%"><strong>{{$apostador[$rodadaAtual]['time']['nome']}}</strong>
-                                        <img src="{{$apostador[$rodadaAtual]['time']['foto_perfil']}}" width="10%">{{number_format($apostador['pontuacaoMensal'],2)}}
+                                    <li>
+                                         <div class="row">
+                                            <div class="col-lg-1">
+                                                {{$posicaoMes}}º
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$apostador[$rodadaAtual]['time']['url_escudo_svg']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <strong>{{$apostador[$rodadaAtual]['time']['nome']}}</strong>
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$apostador[$rodadaAtual]['time']['foto_perfil']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-2">
+                                                {{number_format($apostador['pontuacaoMensal'],2)}}
+                                            </div>
+                                        </div>
                                     </li>
-                                    <?php $posicao++ ?>
+                                    <?php $posicaoMes++ ?>
                                     @endforeach
                                 </ul>
                             </div>
@@ -171,9 +203,66 @@
                             <div class="entry-content">
                                 <ul>
                                     @foreach ($tabelaMes as $key => $vencedor)
-                                    <li>{{$key}}
-                                        <img src="{{$vencedor[0]['time']['url_escudo_svg']}}" width="10%"><strong>{{$vencedor[0]['time']['nome']}}</strong>
-                                        <img src="{{$vencedor[0]['time']['foto_perfil']}}" width="10%">{{number_format($vencedor[0]['pontuacaoMes'],2)}}
+                                    <li>
+                                        <div class="row">
+                                            <div class="col-lg-1">
+                                                {{$key}}
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$vencedor[0]['time']['url_escudo_svg']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <strong>{{$vencedor[0]['time']['nome']}}</strong>
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$vencedor[0]['time']['foto_perfil']}}" width="100%">
+                                            </div>
+                                            <div class="col-lg-2">
+                                                {{number_format($vencedor[0]['pontuacaoMes'],2)}}
+                                            </div>
+                                        </div>
+                                    </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--Table Wrap End-->
+            </div>
+        </div>
+        <!--Widget Ranking End-->
+    </aside>
+    <aside class="col-lg-12" style="padding-left: 0px!important;">
+        <!--Widget Ranking Start-->
+        <div class="widget widget_ranking" style="border: 1px solid #c0c0c0;">
+            <!--Heading 1 Start-->
+            <h6 class="kf_hd1">
+                <span>Resultados Rodada a Rodada</span>
+            </h6>
+            <!--Heading 1 END-->
+            <div class="kf_border" style="background-color: #FFFFFF;">
+                <!--Table Wrap Start-->
+                <div id="price">
+                    <!--price tab-->
+                    <div class="plan">
+                        <div class="plan-inner">
+                            <div class="entry-content">
+                                <ul>
+                                    @foreach ($tabelaMesMes as $key => $rodada)
+                                    <li>
+                                        <div class="row text-center" style="padding: 14px; font-size: 20px;">
+                                            <div class="col-lg-12">
+                                                <strong> Rodada {{$key}} </strong> 
+                                            </div>
+                                            </div>
+                                        <div class="row">
+                                    @foreach ($rodada as $chave => $posicoes)
+                                            <div class="col-lg-3" style="padding: 10px;">
+                                                <strong> {{$chave+1}}º </strong> {{$posicoes['apostador']}} - {{number_format($posicoes['pontos'], 2, '.', '')}}
+                                            </div>
+                                     @endforeach
+                                        </div>
                                     </li>
                                     @endforeach
                                 </ul>
@@ -202,14 +291,29 @@
                         <div class="plan-inner">
                             <div class="entry-content">
                                 <ul>
-                                    <?php $posicao = 1;
+                                    <?php $posicaoDevido = 1;
                                     ?>
                                     @foreach ($tabelaDevido as $key => $cotas)
-                                    <li>{{$posicao}}
-                                        <img src="{{$cotas['time']['time']['url_escudo_svg']}}" width="10%"><strong>{{$cotas['time']['time']['nome']}}</strong>
-                                        <img src="{{$cotas['time']['time']['foto_perfil']}}" width="10%">R$ {{number_format($cotas['cota'] * 3,2)}}
+                                    <li>
+                                        <div class="row">
+                                            <div class="col-lg-1">
+                                                {{$posicaoDevido}}º
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$cotas['time']['url_escudo_svg']}}" width="70%">
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <strong>{{$cotas['time']['nome']}}</strong>
+                                            </div>
+                                            <div class="col-lg-2">
+                                                <img src="{{$cotas['time']['foto_perfil']}}" width="70%">
+                                            </div>
+                                            <div class="col-lg-2">
+                                                R$ {{number_format(($cotas['cota']) * 3,2)}}
+                                            </div>
+                                        </div>
                                     </li>
-                                    <?php $posicao++ ?>
+                                    <?php $posicaoDevido++ ?>
                                     @endforeach
                                 </ul>
                             </div>

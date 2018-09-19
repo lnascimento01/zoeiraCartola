@@ -6,11 +6,13 @@
             <file>file:/C:/xampp/htdocs/zoeiraCartola/app/Http/Controllers/HomeController.php</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/resources/views/home.blade.php</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/resources/views/index.blade.php</file>
+            <file>file:/C:/xampp/htdocs/zoeiraCartola/app/Http/Controllers/LigaController.php</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/public/css/default.css</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/public/css/slider/main.css</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/app/Http/Controllers/IndexController.php</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/public/css/index.css</file>
             <file>file:/C:/xampp/htdocs/zoeiraCartola/routes/web.php</file>
+            <file>file:/C:/xampp/htdocs/zoeiraCartola/app/Http/Controllers/AuthenticarController.php</file>
         </group>
     </open-files>
 </project-private>

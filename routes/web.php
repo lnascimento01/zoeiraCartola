@@ -12,3 +12,5 @@
 */
 
 Route::get('/', 'IndexController@index');
+Route::get('/api/liga', 'LigaController@index');
+Route::get('/auth', 'AuthenticarController@index');

@@ -6,88 +6,166 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Unirest;
+use function array_sort;
 use function Symfony\Component\Debug\header;
 use function view;
 
 class IndexController extends Controller {
 
-    /**
-     * Display a listing of the resource.
-     *
-     * @return Response
-     */
-    public function index() {
+    private $req;
+
+    public function index(Request $request) {
+        $this->req = $request->api;
+        ini_set('max_execution_time', 380);
 
         $status = $this->consulta('https://api.cartolafc.globo.com/mercado/status');
-        $apostadores = DB::table('apostadores')
-                        ->select('*')
-                        ->where('status', '=', 1)->orderBy('id', 'asc')->get()->toArray();
+        $apostadores = DB::table('apostadores')->leftJoin('cotas_pg', 'apostadores.id', '=', 'cotas_pg.id_apostador')
+                        ->select('apostadores.*', DB::raw('SUM(cotas_pg.qtd_cotas) as cotas_pagas'))
+                        ->where('apostadores.status', '=', 1)
+                        ->orderBy('apostadores.id', 'asc')->groupBy('apostadores.id')->get()->toArray();
 
-        $boxPartidas = $this->boxPartidas();
+        if ($request->api == '0') {
+            $login = $this->autenticar($request->login, $request->pass);
+            return $login;
+        } else if ($request->api == '1') {
 
-        $tabelaGeral = array_values(array_sort($this->tabelaGeral($apostadores, $status), function ($value) {
-                    return $value['pontuacaoGeral'];
-                }));
+            $tabelaDevido = $this->tabelaDevido($apostadores, $status);
 
-        $tabelaMensal = array_values(array_sort($this->tabelaMensal($apostadores, $status), function ($value) {
-                    return $value['pontuacaoMensal'];
-                }));
+            return json_encode($tabelaDevido);
+        } else if ($request->api == '2') {
+            $time = $request->slug;
+            $plantel = $this->parcial($status, $time);
 
-        $tabelaVencedorMes = $this->tabelaVencedorMes($apostadores, $status);
+            return json_encode($plantel);
+        } else if ($request->api == '3') {
+            $body = json_encode(array(
+                "esquema" => 3,
+                "atleta" => [
+                    84709,
+                    80692,
+                    72294,
+                    83433,
+                    51772,
+                    92180,
+                    78435,
+                    69138,
+                    50856,
+                    72491,
+                    91508,
+                    87863
+                ],
+                "capitao_id"=> 84709))
+            ;
+            $_SESSION['X-GLB-Token'] = $request->token;
+            $logado = $this->consultaAuthApiCartola('https://api.cartolafc.globo.com/auth/time', $request->token);
 
-        $tabelaDevido = $this->tabelaDevido($apostadores, $status);
+            return json_encode($logado);
+        } else if ($request->api == '4') {
+            $_SESSION['X-GLB-Token'] = $request->token;
+            $logado = $this->consultaAuthApiCartola('https://api.cartolafc.globo.com/auth/ligas', $request->token);
 
-        return view('index', ['boxPartidas' => $boxPartidas, 'tabelaGeral' => $tabelaGeral, 'tabelaMensal' => $tabelaMensal, 'status' => $status, 'tabelaMes' => $tabelaVencedorMes, 'tabelaDevido' => $tabelaDevido]);
-    }
+            $logadoOrdenado = array_values(array_sort($logado->body->ligas, function ($value) {
+                        return $value->tipo;
+                    }));
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return Response
-     */
-    public function create() {
-        //
-    }
+            return json_encode($logadoOrdenado);
+        } else if ($request->api == '5') {
+            $return = array(
+                "RB" => array(
+                    "acao" => "Roubada de bola",
+                    "pontos" => 1.7
+                ),
+                "FC" => array(
+                    "acao" => "Falta cometida",
+                    "pontos" => -0.5
+                ),
+                "GC" => array(
+                    "acao" => "Gol contra",
+                    "pontos" => -6.0
+                ),
+                "CA" => array(
+                    "acao" => "Cartão amarelo",
+                    "pontos" => -2.0
+                ),
+                "CV" => array(
+                    "acao" => "Cartão vermelho",
+                    "pontos" => -5.0
+                ),
+                "FS" => array(
+                    "acao" => "Falta sofrida",
+                    "pontos" => 0.5
+                ),
+                "PE" => array(
+                    "acao" => "Passe errado",
+                    "pontos" => -0.3
+                ),
+                "FT" => array(
+                    "acao" => "Finalização na trave",
+                    "pontos" => 3.5
+                ),
+                "FD" => array(
+                    "acao" => "Finalização defendida",
+                    "pontos" => 1.0
+                ),
+                "FF" => array(
+                    "acao" => "Finalização para fora",
+                    "pontos" => 0.7
+                ),
+                "G" => array(
+                    "acao" => "Gols",
+                    "pontos" => 8.0
+                ),
+                "I" => array(
+                    "acao" => "Impedimento",
+                    "pontos" => -0.5
+                ),
+                "PP" => array(
+                    "acao" => "Penalti perdido",
+                    "pontos" => -3.5
+                ),
+                "A" => array(
+                    "acao" => "Assistência",
+                    "pontos" => 5.0
+                ),
+                "SG" => array(
+                    "acao" => "Jogo sem sofrer gol",
+                    "pontos" => 5.0
+                ),
+                "DD" => array(
+                    "acao" => "Defesa difícil",
+                    "pontos" => 3.0
+                ),
+                "DP" => array(
+                    "acao" => "Defesa de penalti",
+                    "pontos" => 7.0
+                ),
+                "GS" => array(
+                    "acao" => "Gol sofrido",
+                    "pontos" => -2.0
+                )
+            );
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  Request  $request
-     * @return Response
-     */
-    public function store(Request $request) {
-        //
-    }
+            return json_encode($return);
+        } else {
+            $tabelaDevido = $this->tabelaDevido($apostadores, $status);
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function show($id) {
-        //
-    }
+            $boxPartidas = $this->boxPartidas();
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function edit($id) {
-        //
-    }
+            $consultaGeral = $this->tabelaGeral($apostadores, $status);
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  Request  $request
-     * @param  int  $id
-     * @return Response
-     */
-    public function update(Request $request, $id) {
-        //
+            $tabelaGeral = array_values(array_sort($consultaGeral['tabela_geral'], function ($value) {
+                        return $value['pontuacaoGeral'];
+                    }));
+
+            $tabelaMensal = array_values(array_sort($this->tabelaMensal($apostadores, $status), function ($value) {
+                        return $value['pontuacaoMensal'];
+                    }));
+
+            $tabelaVencedorMes = $this->tabelaVencedorMes($apostadores, $status);
+
+            return view('index', ['boxPartidas' => $boxPartidas, 'tabelaGeral' => $tabelaGeral, 'tabelaMensal' => $tabelaMensal, 'status' => $status, 'tabelaMes' => $tabelaVencedorMes,
+                'tabelaDevido' => $tabelaDevido, 'tabelaMesMes' => $consultaGeral['vencedor_mes_mes']]);
+        }
     }
 
     /**
@@ -120,6 +198,15 @@ class IndexController extends Controller {
         return $response;
     }
 
+    public function consultaAuthApiCartola($url, $token) {
+        $response = Unirest\Request::get($url, array(
+                    "X-GLB-Token" => $token,
+                    "Accept" => "application/json"
+                        )
+        );
+        return $response;
+    }
+
     public function parciais($url) {
         $options = array(
             'http' =>
@@ -136,68 +223,112 @@ class IndexController extends Controller {
         return json_decode($file, true);
     }
 
-    public function autenticar($url) {
+    public function autenticar($login, $pass) {
+
         $body = array('payload' => array(
                 'email' => $login,
-                'password' => $password,
+                'password' => $pass,
                 'serviceId' => 4728
         ));
-        return sendRequest('authentication', array(
-            'base' => 'https://login.globo.com/api/',
-            'body' => $body
+        return $this->sendRequest('authentication', array(
+                    'base' => 'https://login.globo.com/api/',
+                    'body' => $body
         ));
+    }
 
-        unset($arguments['p']);
-        $path = $_GET['p'] . '?' . http_build_query($arguments);
-        $results = sendRequest($path, array(
-            'token' => isset($_GET['token']) ? $_GET['token'] : false,
-            'body' => !empty($_POST) ? $_POST : false
-        ));
-        if (trim($results) == '404 page not found') {
-            header('HTTP/1.0 404 Not Found');
+    function sendRequest($path, $options = array()) {
+        $options = array_merge(array(
+            'base' => 'https://api.cartolafc.globo.com/',
+            'body' => false,
+            'token' => false
+                ), $options);
+        $c = curl_init();
+        curl_setopt($c, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($c, CURLOPT_URL, $options['base'] . $path);
+        if ($options['body']) {
+            curl_setopt($c, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($c, CURLOPT_POST, true);
+            curl_setopt($c, CURLOPT_POSTFIELDS, json_encode($options['body']));
+        } else {
+            curl_setopt($c, CURLOPT_FRESH_CONNECT, true);
         }
-        echo $results;
-
-
-        if (isset($_GET['p'])) {
-            if ($_GET['p'] == 'login' && isset($_GET['login']) && isset($_GET['password'])) {
-                echo login($_GET['login'], $_GET['password']);
-            } else {
-                echo api($_GET);
-            }
+        if ($options['token']) {
+            curl_setopt($c, CURLOPT_HTTPHEADER, array('X-GLB-Token: ' . $options['token']));
+            curl_setopt($c, CURLOPT_VERBOSE, false);
         }
+
+        $result = curl_exec($c);
+        curl_close($c);
+        return $result;
     }
 
     public function tabelaGeral($apostadores, $status) {
-
-//        $status = $this->consulta('https://api.cartolafc.globo.com/mercado/status');
+        ini_set('max_execution_time', 380);
         $rodadaAtual = $status['rodada_atual'];
         $tabelaGeral = [];
+        $vencedoresRodadas = [];
 
         foreach ($apostadores as $apostador) {
+
             $rodada = 1;
             $scoutApostador = [];
             $totalPontos = 0;
+            $pontosRodada = [];
 
-            while ($rodada <= $rodadaAtual) {
+            while ($rodada < $rodadaAtual) {
                 $scoutRodada = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
                 $scoutApostador[$rodadaAtual] = $scoutRodada;
                 $totalPontos = $totalPontos + $scoutRodada['pontos'];
+//                $vencedoresRodadas[$apostador->id] = array('time' => $scoutRodada['time'], 'pontos_rodada' => array());
+
+                array_push($pontosRodada, array($rodada => $scoutRodada['pontos']));
                 $rodada++;
             }
+            $vencedoresRodadas[$apostador->id]['pontos_rodada'] = $pontosRodada;
             $scoutApostador['pontuacaoGeral'] = $totalPontos;
             $tabelaGeral[$apostador->id] = $scoutApostador;
         }
-        return $tabelaGeral;
+
+        $mes = [];
+
+        $rodada = 1;
+        while ($rodada < $rodadaAtual) {
+            $mes[$rodada] = [];
+            foreach ($vencedoresRodadas as $key => $vencedor) {
+                $chave = $key - 1;
+
+                array_push($mes[$rodada], array('id_apostador' => $key, 'apostador' => $apostadores[$chave]->nome, 'pontos' => $vencedor['pontos_rodada'][$rodada - 1][$rodada]));
+            }
+            $rodada++;
+        }
+
+        $mesOrdenado = [];
+        foreach ($mes as $idMes => $rodada) {
+            $mesOrdenado[$idMes] = array_values(array_sort($rodada, function ($value) {
+                        return $value['pontos'];
+                    }));
+        }
+
+        $return = array('tabela_geral' => $tabelaGeral, 'vencedor_mes_mes' => $mesOrdenado);
+
+        return $return;
     }
 
     public function tabelaMensal($apostadores, $status) {
+        ini_set('max_execution_time', 380);
+        $mesAtual = 1;
 
-        $mesAtual = date('Y-m');
+        if ($status['rodada_atual'] >= 9) {
+            $mesAtual = date('Y-m', strtotime('-1 months', strtotime(date('Y-m-d'))));
+        } else {
+            $mesAtual = date('Y-m');
+        }
 
         $rodadasInfo = DB::table('rodadas')
                         ->select('rodada_id')
-                        ->where('inicio', 'like', $mesAtual . '%')->orderBy('id', 'asc')->get()->toArray();
+                        ->where('inicio', 'like', $mesAtual . '%')
+                        ->orWhere('inicio', 'like', date('Y-m') . '%')->orderBy('id', 'asc')->get()->toArray();
 
         $rodadaAtual = $status['rodada_atual'];
         $tabelaMensal = [];
@@ -217,7 +348,9 @@ class IndexController extends Controller {
                 }
             }
 
-            $scoutApostador['pontuacaoMensal'] = $totalPontos;
+            $parcialPontos = $this->parcial($status, $apostador->slug_time);
+
+            $scoutApostador['pontuacaoMensal'] = $totalPontos + $parcialPontos['total'];
             $tabelaMensal[$apostador->id] = $scoutApostador;
         }
 
@@ -225,7 +358,8 @@ class IndexController extends Controller {
     }
 
     public function tabelaVencedorMes($apostadores, $status) {
-        $rodadasInfo = array('Março' => array(1, 2, 3), 'Abril' => array(4, 5, 6, 7, 8), 'Junho' => array(9, 10, 11, 12), 'julho' => array(13, 14, 15, 16),
+        ini_set('max_execution_time', 380);
+        $rodadasInfo = array('Abril' => array(1, 2, 3), 'Maio' => array(4, 5, 6, 7, 8), 'Jun/Jul' => array(9, 10, 11, 12, 13, 14, 15, 16),
             'Agosto' => array(17, 18, 19, 20, 21), 'Setembro' => array(22, 23, 24, 25, 26, 27), 'Outubro' => array(28, 29, 30, 31), 'Novembro' => array(32, 33, 34, 35, 36, 37, 38));
 
         $tabelaDevido = [];
@@ -257,6 +391,10 @@ class IndexController extends Controller {
     }
 
     public function tabelaDevido($apostadores, $status) {
+        ini_set('max_execution_time', 380);
+        $frases = [];
+        $frases[] = array(1 => 'Tecnologia não ganha rodada!', 2 => 'Escala mas não chega a lugar algum!', 3 => 'O perseguido!', 4 => 'O perdedor silencioso!',
+            5 => 'Late demais, não ganha nada!', 6 => 'O Lenny do cartola!', 7 => 'Falsa promessa!');
 
         $rodada = 1;
         $tableVencedorRodada = [];
@@ -265,41 +403,24 @@ class IndexController extends Controller {
         while ($rodada < $status['rodada_atual']) {
             $scoutRodada = [];
             foreach ($apostadores as $apostador) {
-//                $scoutRodada['apostador'] = $apostador;
-                $scoutRodada[$apostador->id] = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
-                $scoutRodada[$apostador->id]['time']['id_apostador'] = $apostador->id;
 
-//        $rodadaAtual = $status['rodada_atual'];
-//        $tabelaGeral = [];
-//
-//        foreach ($apostadores as $apostador) {
-//            $rodada = 1;
-//            $scoutApostador = [];
-//            $totalPontos = 0;
-//
-//            while ($rodada <= $rodadaAtual) {
-//                $scoutRodada = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
-//                $scoutApostador[$rodadaAtual] = $scoutRodada;
-//                $totalPontos = $totalPontos + $scoutRodada['pontos'];
-//                $rodada++;
-//            }
-//            $scoutApostador['pontuacaoGeral'] = $totalPontos;
-//            $tabelaGeral[$apostador->id] = $scoutApostador;
-//        }
+                $retorno = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
+                $scoutRodada[$apostador->id] = $retorno['time'];
+                $scoutRodada[$apostador->id]['pontos'] = $retorno['pontos'];
+                $scoutRodada[$apostador->id]['id_apostador'] = $apostador->id;
             }
             $times = array_values(array_sort($scoutRodada, function ($value) {
                         return $value['pontos'];
                     }));
 
-
             foreach ($times as $id => $time) {
                 if ($id != 0) {
-                    $apostasRodaada[$time['time']['id_apostador']]['time'] = $time;
-                    if (!isset($apostasRodaada[$time['time']['id_apostador']]['cota'])) {
+                    $apostasRodaada[$time['id_apostador']]['time'] = $time;
+                    if (!isset($apostasRodaada[$time['id_apostador']]['cota'])) {
 //                        $apostasRodaada[$time['time']['id_apostador']]['cota'] = !isset($apostasRodaada[$time['time']['id_apostador']]['cota']) ? 0 : $apostasRodaada[$time['time']['id_apostador']]['cota'] + 1;
-                        $apostasRodaada[$time['time']['id_apostador']]['cota'] = 0;
+                        $apostasRodaada[$time['id_apostador']]['cota'] = 1;
                     } else {
-                        $apostasRodaada[$time['time']['id_apostador']]['cota'] ++;
+                        $apostasRodaada[$time['id_apostador']]['cota'] ++;
                     }
                 }
             }
@@ -307,15 +428,34 @@ class IndexController extends Controller {
             $rodada++;
         }
 
+        foreach ($apostadores as $apostador) {
+            $apostasRodaada[$apostador->id]['cota'] -= $apostador->cotas_pagas;
+            $apostasRodaada[$apostador->id]['frase'] = $frases[0][$apostador->id];
+        }
+
         $apostasOrdenadas = array_values(array_sort($apostasRodaada, function ($value) {
                     return $value['cota'];
                 }));
 
+        if ($this->req == '1') {
+            $return = [];
+            foreach ($apostasOrdenadas as $aposta) {
+                $idApostador = $aposta['time']['id_apostador'];
 
-        return $apostasOrdenadas;
+                $return[] = array('id_apostador' => $idApostador, 'nome' => $aposta['time']['nome'], 'cartola' => $aposta['time']['nome_cartola'],
+                    'cotas' => $aposta['cota'], 'escudo' => $aposta['time']['url_escudo_png'], 'url_escudo_svg' => $aposta['time']['url_escudo_svg'],
+                    'frase' => $aposta['frase']);
+            }
+        } else {
+
+            $return = $apostasOrdenadas;
+        }
+
+        return $return;
     }
 
     public function boxPartidas() {
+        ini_set('max_execution_time', 380);
         $json = $this->consulta('https://api.cartolafc.globo.com/partidas');
         $listaPartidas = array_slice($json, 0, 1);
         $listaClubes = array_slice($json, 1, 2);
@@ -340,6 +480,146 @@ class IndexController extends Controller {
             }
         }
         return $boxPartidas;
+    }
+
+    public function parcial($status, $timeApostador) {
+        $rodadaAtual = $status['status_mercado'] == 1 ? $status['rodada_atual'] - 1 : $status['rodada_atual'];
+        $rodadasInfo = DB::table('rodadas')
+                        ->select('*')
+                        ->where('rodada_id', '=', $rodadaAtual)->orderBy('id', 'asc')->get()->toArray();
+
+        $time = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $timeApostador . '/' . $rodadaAtual);
+
+        $pontuacoes = $this->consulta('https://api.cartolafc.globo.com/atletas/pontuados');
+
+        $dadosScout = [];
+        $dadosScout['GS'] = 'Gols sofridos';
+        $dadosScout['CA'] = 'Cartões Amarelos';
+        $dadosScout['CV'] = 'Cartões Vermelhos';
+        $dadosScout['FC'] = 'Faltas Cometidas';
+        $dadosScout['FS'] = 'Faltas Sofridas';
+        $dadosScout['GC'] = 'Gols Contra';
+        $dadosScout['RB'] = 'Bolas Roubadas';
+        $dadosScout['DD'] = 'Defesas Difíceis';
+        $dadosScout['DP'] = 'Defesas Penâlti';
+        $dadosScout['SG'] = 'Jogos S/ Gol';
+        $dadosScout['PE'] = 'Passes Errados';
+        $dadosScout['PP'] = 'Penâlti Perdido';
+        $dadosScout['I'] = 'Impedimento';
+        $dadosScout['FF'] = 'Finalização Fora';
+        $dadosScout['FT'] = 'Finalização Trave';
+        $dadosScout['FD'] = 'Finalização Defendida';
+        $dadosScout['A'] = 'Assistência';
+        $dadosScout['G'] = 'Gols';
+
+        $scout = [];
+        $scoutTotal = 0;
+        foreach ($time['atletas'] as $atleta) {
+            $idAtleta = $atleta['atleta_id'];
+            $idClube = $atleta['clube_id'];
+            $idPosicao = $atleta['posicao_id'];
+            $pontosAtual = ($status['status_mercado'] != 1 ? !array_key_exists($idAtleta, $pontuacoes['atletas']) ? 0 : $pontuacoes['atletas'][$idAtleta]['pontuacao'] : $pontuacoes['atletas'][$idAtleta]['pontuacao']);
+            if ($status['status_mercado'] != 1) {
+                if ($status['status_mercado'] != 1) {
+                    if (!array_key_exists($idAtleta, $pontuacoes['atletas'])) {
+//                $scoutAtual = ($status['status_mercado'] != 1 ? !array_key_exists($idAtleta, $pontuacoes['atletas']) ? 0 : $pontuacoes['atletas'][$idAtleta]['scout'] : $pontuacoes['atletas'][$idAtleta]['scout']);
+                        $scoutAtual = [];
+                        $scoutAtual[] = 'Sem scout';
+                    } else {
+                        $scoutAtual = [];
+                        foreach ($pontuacoes['atletas'][$idAtleta]['scout'] as $abrv => $fundamento) {
+                            $scoutAtual[$dadosScout[$abrv]] = $fundamento;
+                        }
+                    }
+                } else {
+                    $scoutAtual = [];
+                    foreach ($pontuacoes['atletas'][$idAtleta]['scout'] as $abrv => $fundamento) {
+                        $scoutAtual[$dadosScout[$abrv]] = $fundamento;
+                    }
+                }
+            } else {
+                $scoutAtual = [];
+                foreach ($atleta['scout'] as $abrv => $fundamento) {
+                    $scoutAtual[$dadosScout[$abrv]] = $fundamento;
+                }
+            }
+            $pontos = $status['status_mercado'] == 1 || in_array($idClube, explode(',', $rodadasInfo[0]->ausencias)) ? $atleta['pontos_num'] : $pontosAtual;
+
+            $scout[] = array('atleta_id' => $idAtleta, 'apelido' => $atleta['apelido'],
+                'pontos' => $idAtleta == $time['capitao_id'] ? $pontos * 2 : $pontos, 'scout' => $scoutAtual, 'capitao' => $idAtleta == $time['capitao_id'] ? 'closed-caption' : '',
+                'foto' => str_replace('FORMATO', '140x140', $atleta['foto']), 'posicao_id' => $atleta['posicao_id'],
+                'posicao_atleta' => $time['posicoes'][$idPosicao]['nome'], 'nome_clube' => $idClube == 1 ? 'Tra' : $time['clubes'][$idClube]['nome'],
+                'posicao_clube' => $idClube == 1 ? 'Tra' : $time['clubes'][$idClube]['posicao'], 'escudo_clube' => $idClube == 1 ? '' : $time['clubes'][$idClube]['escudos']['60x60']);
+            $scoutTotal += $idAtleta == $time['capitao_id'] ? $pontos * 2 : $pontos;
+        }
+
+        $scoutOrdenado = array_values(array_sort_asc($scout, function ($value) {
+                    return $value['posicao_id'];
+                }));
+
+        $scoutJson = [];
+        $contador = 0;
+        foreach ($scoutOrdenado as $scout) {
+            $scoutJson[] = array('name' => $scout['apelido'] . ' - ' . $scout['nome_clube'] . ' ' . $scout['posicao_clube'] . 'º', 'foto' => $scout['foto'], 'header' => ($contador % 2) == 0 ? true : false, 'index' => $contador);
+            $contador++;
+            $scoutJson[] = array('name' => ' Posição: ' . $scout['posicao_atleta'] . ' - Pontos: ' . $scout['pontos'], 'header' => ($contador % 2) == 0 ? true : false, 'scout' => $scout['scout']);
+//            $scoutJson[] = array('name' => $scout['apelido'] . ' - Clube:' . $scout['nome_clube'] . ' ' . $scout['posicao_clube'],
+//                'content' => ' Posição:' . $scout['posicao_atleta'] . ' - Pontos:' . $scout['pontos']);
+            $contador++;
+        }
+//          const dataArray = [{title: nome.apelido + " - Clube: " + nome.nome_clube +" "+  nome.posicao_clube+"º", 
+//	  content: "Posição: " + nome.posicao_atleta + 
+//      " - Pontos: "+ nome.pontos }];
+
+        $return = array('scout' => $scoutOrdenado, 'total' => number_format((float) $scoutTotal, 2, '.', ''));
+
+        return $return;
+    }
+
+    public function parcialAccord($status) {
+        ini_set('max_execution_time', 380);
+        $rodadaAtual = $status['status_mercado'] == 1 ? $status['rodada_atual'] - 1 : $status['rodada_atual'];
+        $rodadasInfo = DB::table('rodadas')
+                        ->select('*')
+                        ->where('rodada_id', '=', $rodadaAtual)->orderBy('id', 'asc')->get()->toArray();
+
+        $time = $this->consulta('https://api.cartolafc.globo.com/time/slug/azzurras-f-c/' . $rodadaAtual);
+
+        $pontuacoes = $this->consulta('https://api.cartolafc.globo.com/atletas/pontuados');
+
+        $scout = [];
+        $scoutTotal = 0;
+        foreach ($time['atletas'] as $atleta) {
+            $idAtleta = $atleta['atleta_id'];
+            $idClube = $atleta['clube_id'];
+            $idPosicao = $atleta['posicao_id'];
+            $pontosAtual = !array_key_exists($idAtleta, $pontuacoes['atletas']) ? 0 : $pontuacoes['atletas'][$idAtleta]['pontuacao'];
+            $scoutAtual = !array_key_exists($idAtleta, $pontuacoes['atletas']) ? 0 : $pontuacoes['atletas'][$idAtleta]['scout'];
+
+            $pontos = $status['status_mercado'] == 1 || in_array($idClube, explode(',', $rodadasInfo[0]->ausencias)) ? $atleta['pontos_num'] : $pontosAtual;
+
+            $scout[] = array('atleta_id' => $idAtleta, 'apelido' => $atleta['apelido'],
+                'pontos' => $idAtleta == $time['capitao_id'] ? $pontos * 2 : $pontos, 'scout' => $status['status_mercado'] == 1 ? $atleta['scout'] : $scoutAtual,
+                'foto' => str_replace('FORMATO', '140x140', $atleta['foto']), 'posicao_id' => $atleta['posicao_id'],
+                'posicao_atleta' => $time['posicoes'][$idPosicao]['nome'], 'nome_clube' => $idClube == 1 ? 'Tra' : $time['clubes'][$idClube]['nome'],
+                'posicao_clube' => $idClube == 1 ? 'Tra' : $time['clubes'][$idClube]['posicao'], 'escudo_clube' => $idClube == 1 ? '' : $time['clubes'][$idClube]['escudos']['60x60']);
+            $scoutTotal += $idAtleta == $time['capitao_id'] ? $pontos * 2 : $pontos;
+        }
+
+        $scoutOrdenado = array_values(array_sort_asc($scout, function ($value) {
+                    return $value['posicao_id'];
+                }));
+
+        $layoutAccordion = [];
+
+        foreach ($scoutOrdenado as $scout) {
+            $layoutAccordion[$scout['atleta_id']] = array('title' => '"<Thumbnail square large source=' . $scout['foto'] . ' />' . $scout['foto'] . ' - Clube: ' . $scout['nome_clube'] . $scout['posicao_clube'] . '"',
+                'content' => '"Posição: ' . $scout['posicao_atleta'] . ' - Pontos: ' . $scout['pontos']);
+        }
+
+        $return = array('scout' => $layoutAccordion, 'total' => $scoutTotal);
+
+        return $return;
     }
 
 }
