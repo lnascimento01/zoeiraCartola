@@ -13,16 +13,49 @@ use function view;
 class IndexController extends Controller {
 
     private $req;
+    private $tableMes;
+    private $status;
+    private $apostadores;
+    private $mesAtual;
 
     public function index(Request $request) {
         $this->req = $request->api;
-        ini_set('max_execution_time', 380);
 
         $status = $this->consulta('https://api.cartolafc.globo.com/mercado/status');
         $apostadores = DB::table('apostadores')->leftJoin('cotas_pg', 'apostadores.id', '=', 'cotas_pg.id_apostador')
                         ->select('apostadores.*', DB::raw('SUM(cotas_pg.qtd_cotas) as cotas_pagas'))
                         ->where('apostadores.status', '=', 1)
                         ->orderBy('apostadores.id', 'asc')->groupBy('apostadores.id')->get()->toArray();
+
+        $this->status = $status;
+        $this->apostadores = $apostadores;
+
+        switch (date("m")) {
+            case "01": $this->mesAtual = "Janeiro";
+                break;
+            case "02": $this->mesAtual = "Fevereiro";
+                break;
+            case "03": $this->mesAtual = "Março";
+                break;
+            case "04": $this->mesAtual = "Abril";
+                break;
+            case "05": $this->mesAtual = "Maio";
+                break;
+            case "06": $this->mesAtual = "Jun/Jul";
+                break;
+            case "07": $this->mesAtual = "Jun/Jul";
+                break;
+            case "08": $this->mesAtual = "Agosto";
+                break;
+            case "09": $this->mesAtual = "Setembro";
+                break;
+            case "10": $this->mesAtual = "Outubro";
+                break;
+            case "11": $this->mesAtual = "Novembro";
+                break;
+            case "12": $this->mesAtual = "Dezembro";
+                break;
+        }
 
         if ($request->api == '0') {
             $login = $this->autenticar($request->login, $request->pass);
@@ -38,24 +71,24 @@ class IndexController extends Controller {
 
             return json_encode($plantel);
         } else if ($request->api == '3') {
-            $body = json_encode(array(
-                "esquema" => 3,
-                "atleta" => [
-                    84709,
-                    80692,
-                    72294,
-                    83433,
-                    51772,
-                    92180,
-                    78435,
-                    69138,
-                    50856,
-                    72491,
-                    91508,
-                    87863
-                ],
-                "capitao_id"=> 84709))
-            ;
+//            $body = json_encode(array(
+//                "esquema" => 3,
+//                "atleta" => [
+//                    84709,
+//                    80692,
+//                    72294,
+//                    83433,
+//                    51772,
+//                    92180,
+//                    78435,
+//                    69138,
+//                    50856,
+//                    72491,
+//                    91508,
+//                    87863
+//                ],
+//                "capitao_id" => 84709))
+//            ;
             $_SESSION['X-GLB-Token'] = $request->token;
             $logado = $this->consultaAuthApiCartola('https://api.cartolafc.globo.com/auth/time', $request->token);
 
@@ -147,24 +180,25 @@ class IndexController extends Controller {
 
             return json_encode($return);
         } else {
-            $tabelaDevido = $this->tabelaDevido($apostadores, $status);
+//            $tabelaDevido = $this->tabelaDevido($apostadores, $status);
+            $tabelaDevido = $apostadores;
 
             $boxPartidas = $this->boxPartidas();
 
-            $consultaGeral = $this->tabelaGeral($apostadores, $status);
-
-            $tabelaGeral = array_values(array_sort($consultaGeral['tabela_geral'], function ($value) {
-                        return $value['pontuacaoGeral'];
-                    }));
-
-            $tabelaMensal = array_values(array_sort($this->tabelaMensal($apostadores, $status), function ($value) {
-                        return $value['pontuacaoMensal'];
-                    }));
+//            $consultaGeral = $this->tabelaGeral($apostadores, $status);
 
             $tabelaVencedorMes = $this->tabelaVencedorMes($apostadores, $status);
 
-            return view('index', ['boxPartidas' => $boxPartidas, 'tabelaGeral' => $tabelaGeral, 'tabelaMensal' => $tabelaMensal, 'status' => $status, 'tabelaMes' => $tabelaVencedorMes,
-                'tabelaDevido' => $tabelaDevido, 'tabelaMesMes' => $consultaGeral['vencedor_mes_mes']]);
+//            $tabelaGeral = array_values(array_sort($consultaGeral['tabela_geral'], function ($value) {
+//                        return $value['pontuacaoGeral'];
+//                    }));
+
+            $tabelaMensal = array_values(array_sort($this->tableMes, function ($value) {
+                        return $value['pontuacaoMes'];
+                    }));
+
+            return view('index', ['boxPartidas' => $boxPartidas, 'tabelaMensal' => $tabelaMensal, 'status' => $status, 'tabelaMes' => $tabelaVencedorMes,
+                'tabelaDevido' => $tabelaDevido]);
         }
     }
 
@@ -175,6 +209,7 @@ class IndexController extends Controller {
      * @return Response
      */
     public function consulta($url) {
+        ini_set('max_execution_time', 380);
         $options = array(
             'http' =>
             array(
@@ -264,7 +299,6 @@ class IndexController extends Controller {
     }
 
     public function tabelaGeral($apostadores, $status) {
-        ini_set('max_execution_time', 380);
         $rodadaAtual = $status['rodada_atual'];
         $tabelaGeral = [];
         $vencedoresRodadas = [];
@@ -316,7 +350,6 @@ class IndexController extends Controller {
     }
 
     public function tabelaMensal($apostadores, $status) {
-        ini_set('max_execution_time', 380);
         $mesAtual = 1;
 
         if ($status['rodada_atual'] >= 9) {
@@ -357,105 +390,44 @@ class IndexController extends Controller {
         return $tabelaMensal;
     }
 
-    public function tabelaVencedorMes($apostadores, $status) {
-        ini_set('max_execution_time', 380);
-        $rodadasInfo = array('Abril' => array(1, 2, 3), 'Maio' => array(4, 5, 6, 7, 8), 'Jun/Jul' => array(9, 10, 11, 12, 13, 14, 15, 16),
-            'Agosto' => array(17, 18, 19, 20, 21), 'Setembro' => array(22, 23, 24, 25, 26, 27), 'Outubro' => array(28, 29, 30, 31), 'Novembro' => array(32, 33, 34, 35, 36, 37, 38));
+    public function tabelaVencedorMes() {
+//        $vMes = DB::table('vencedores_mes')
+//                ->select('*')
+//                ->get()
+//                ->toArray();
+        $qry = 'select mes_vigente, id_apostador, SUM(pontos) as pontos from pontos_rodada pr
+                INNER JOIN rodadas r
+                ON r.rodada_id = pr.id_rodada
+                group by mes_vigente, id_apostador
+                order by id_rodada, pontos DESC';
+        $vMes = DB::select($qry);
 
-        $tabelaDevido = [];
+        $vencedoresMes = [];
+        $vencedoresMesAtual = [];
 
-        foreach ($rodadasInfo as $key => $mes) {
-            $devidoMes = [];
 
-            foreach ($apostadores as $apostador) {
-                $totalPontos = 0;
-                $scoutApostador = [];
-                foreach ($mes as $rodada) {
-
-                    if ($status['rodada_atual'] > $rodada) {
-                        $scoutRodada = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
-
-                        $scoutApostador[$apostador->id] = $scoutRodada;
-                        $totalPontos = $totalPontos + $scoutRodada['pontos'];
-                    }
-                    $devidoMes[$key][$apostador->id] = $scoutRodada;
-                    $devidoMes[$key][$apostador->id]['pontuacaoMes'] = $totalPontos;
+        foreach ($vMes as $mes) {
+            if (isset($vencedoresMes[$mes->mes_vigente])) {
+                if ($mes->pontos > $vencedoresMes[$mes->mes_vigente]['pontuacaoMes']) {
+                    $vencedoresMes[$mes->mes_vigente] = array('nome' => $this->apostadores[$mes->id_apostador - 1]->nome, 'escudo' => $this->apostadores[$mes->id_apostador - 1]->escudo,
+                        'foto' => $this->apostadores[$mes->id_apostador - 1]->foto, 'pontuacaoMes' => $mes->pontos);
                 }
-
-                $tabelaDevido[$key] = array_values(array_sort($devidoMes[$key], function ($value) {
-                            return $value['pontuacaoMes'];
-                        }));
+            } else {
+                $vencedoresMes[$mes->mes_vigente] = array('nome' => $this->apostadores[$mes->id_apostador - 1]->nome, 'escudo' => $this->apostadores[$mes->id_apostador - 1]->escudo,
+                    'foto' => $this->apostadores[$mes->id_apostador - 1]->foto, 'pontuacaoMes' => $mes->pontos);
+            }
+            if ($mes->mes_vigente == $this->mesAtual) {
+                $vencedoresMesAtual[$mes->id_apostador] = array('nome' => $this->apostadores[$mes->id_apostador - 1]->nome, 'escudo' => $this->apostadores[$mes->id_apostador - 1]->escudo,
+                    'foto' => $this->apostadores[$mes->id_apostador - 1]->foto, 'pontuacaoMes' => $mes->pontos);
             }
         }
-        return $tabelaDevido;
-    }
 
-    public function tabelaDevido($apostadores, $status) {
-        ini_set('max_execution_time', 380);
-        $frases = [];
-        $frases[] = array(1 => 'Tecnologia não ganha rodada!', 2 => 'Escala mas não chega a lugar algum!', 3 => 'O perseguido!', 4 => 'O perdedor silencioso!',
-            5 => 'Late demais, não ganha nada!', 6 => 'O Lenny do cartola!', 7 => 'Falsa promessa!');
+        $this->tableMes = $vencedoresMesAtual;
 
-        $rodada = 1;
-        $tableVencedorRodada = [];
-        $apostasRodaada = [];
-
-        while ($rodada < $status['rodada_atual']) {
-            $scoutRodada = [];
-            foreach ($apostadores as $apostador) {
-
-                $retorno = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
-                $scoutRodada[$apostador->id] = $retorno['time'];
-                $scoutRodada[$apostador->id]['pontos'] = $retorno['pontos'];
-                $scoutRodada[$apostador->id]['id_apostador'] = $apostador->id;
-            }
-            $times = array_values(array_sort($scoutRodada, function ($value) {
-                        return $value['pontos'];
-                    }));
-
-            foreach ($times as $id => $time) {
-                if ($id != 0) {
-                    $apostasRodaada[$time['id_apostador']]['time'] = $time;
-                    if (!isset($apostasRodaada[$time['id_apostador']]['cota'])) {
-//                        $apostasRodaada[$time['time']['id_apostador']]['cota'] = !isset($apostasRodaada[$time['time']['id_apostador']]['cota']) ? 0 : $apostasRodaada[$time['time']['id_apostador']]['cota'] + 1;
-                        $apostasRodaada[$time['id_apostador']]['cota'] = 1;
-                    } else {
-                        $apostasRodaada[$time['id_apostador']]['cota'] ++;
-                    }
-                }
-            }
-
-            $rodada++;
-        }
-
-        foreach ($apostadores as $apostador) {
-            $apostasRodaada[$apostador->id]['cota'] -= $apostador->cotas_pagas;
-            $apostasRodaada[$apostador->id]['frase'] = $frases[0][$apostador->id];
-        }
-
-        $apostasOrdenadas = array_values(array_sort($apostasRodaada, function ($value) {
-                    return $value['cota'];
-                }));
-
-        if ($this->req == '1') {
-            $return = [];
-            foreach ($apostasOrdenadas as $aposta) {
-                $idApostador = $aposta['time']['id_apostador'];
-
-                $return[] = array('id_apostador' => $idApostador, 'nome' => $aposta['time']['nome'], 'cartola' => $aposta['time']['nome_cartola'],
-                    'cotas' => $aposta['cota'], 'escudo' => $aposta['time']['url_escudo_png'], 'url_escudo_svg' => $aposta['time']['url_escudo_svg'],
-                    'frase' => $aposta['frase']);
-            }
-        } else {
-
-            $return = $apostasOrdenadas;
-        }
-
-        return $return;
+        return $vencedoresMes;
     }
 
     public function boxPartidas() {
-        ini_set('max_execution_time', 380);
         $json = $this->consulta('https://api.cartolafc.globo.com/partidas');
         $listaPartidas = array_slice($json, 0, 1);
         $listaClubes = array_slice($json, 1, 2);
@@ -577,7 +549,6 @@ class IndexController extends Controller {
     }
 
     public function parcialAccord($status) {
-        ini_set('max_execution_time', 380);
         $rodadaAtual = $status['status_mercado'] == 1 ? $status['rodada_atual'] - 1 : $status['rodada_atual'];
         $rodadasInfo = DB::table('rodadas')
                         ->select('*')
@@ -620,6 +591,127 @@ class IndexController extends Controller {
         $return = array('scout' => $layoutAccordion, 'total' => $scoutTotal);
 
         return $return;
+    }
+
+    public function updateApostas() {
+        $frases = [];
+        $status = $this->consulta('https://api.cartolafc.globo.com/mercado/status');
+        $apostadores = DB::table('apostadores')->leftJoin('cotas_pg', 'apostadores.id', '=', 'cotas_pg.id_apostador')
+                        ->select('apostadores.*', DB::raw('SUM(cotas_pg.qtd_cotas) as cotas_pagas'))
+                        ->where('apostadores.status', '=', 1)
+                        ->orderBy('apostadores.id', 'asc')->groupBy('apostadores.id')->get()->toArray();
+
+        $this->status = $status;
+        $this->apostadores = $apostadores;
+        $this->updateRodadas();
+        
+        $frases[] = array(1 => 'Tecnologia não ganha rodada!', 2 => 'Escala mas não chega a lugar algum!', 3 => 'O perseguido!', 4 => 'O perdedor silencioso!',
+            5 => 'Late demais, não ganha nada!', 6 => 'O Lenny do cartola!', 7 => 'Falsa promessa!');
+
+        $rodada = 1;
+        $apostasRodaada = [];
+
+        while ($rodada < $status['rodada_atual']) {
+            $scoutRodada = [];
+            foreach ($apostadores as $apostador) {
+
+                $retorno = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
+                $scoutRodada[$apostador->id] = $retorno['time'];
+                $scoutRodada[$apostador->id]['pontos'] = $retorno['pontos'];
+                $scoutRodada[$apostador->id]['id_apostador'] = $apostador->id;
+            }
+            $times = array_values(array_sort($scoutRodada, function ($value) {
+                        return $value['pontos'];
+                    }));
+
+            foreach ($times as $id => $time) {
+                if ($id != 0) {
+                    $apostasRodaada[$time['id_apostador']]['time'] = $time;
+                    if (!isset($apostasRodaada[$time['id_apostador']]['cota'])) {
+//                        $apostasRodaada[$time['time']['id_apostador']]['cota'] = !isset($apostasRodaada[$time['time']['id_apostador']]['cota']) ? 0 : $apostasRodaada[$time['time']['id_apostador']]['cota'] + 1;
+                        $apostasRodaada[$time['id_apostador']]['cota'] = 1;
+                    } else {
+                        $apostasRodaada[$time['id_apostador']]['cota'] ++;
+                    }
+                }
+            }
+            $rodada++;
+        }
+
+        foreach ($apostadores as $apostador) {
+            $apostasRodaada[$apostador->id]['cota'] -= $apostador->cotas_pagas;
+            $apostasRodaada[$apostador->id]['frase'] = $frases[0][$apostador->id];
+
+            DB::table('apostadores')
+                    ->where('id', $apostador->id)
+                    ->update(['nome' => $apostasRodaada[$apostador->id]['time']['nome_cartola'], 'foto' => $apostasRodaada[$apostador->id]['time']['foto_perfil'],
+                        'escudo' => $apostasRodaada[$apostador->id]['time']['url_escudo_svg'], 'frase' => $frases[0][$apostador->id], 'devido' => $apostasRodaada[$apostador->id]['cota']]);
+        }
+//
+//        $apostasOrdenadas = array_values(array_sort($apostasRodaada, function ($value) {
+//                    return $value['cota'];
+//                }));
+//        $apostasOrdenadas = array_values(array_sort($apostadores, function ($value) {
+//                    return $value->cotas_pagas;
+//                }));
+//        foreach ($apostasOrdenadas as $aposta) {
+//            $idApostador = $aposta['time']['id_apostador'];
+//
+//
+//            $return[] = array('id_apostador' => $idApostador, 'nome' => $aposta['time']['nome'], 'cartola' => $aposta['time']['nome_cartola'],
+//                'cotas' => $aposta['cota'], 'escudo' => $aposta['time']['url_escudo_png'], 'url_escudo_svg' => $aposta['time']['url_escudo_svg'],
+//                'frase' => $aposta['frase']);
+//        }
+        return 'Apostas atualizadas';
+    }
+
+    public function updateRodadas() {
+
+        $status = $this->status;
+        $apostadores = $this->apostadores;
+        $rodadas = $this->consulta("https://api.cartolafc.globo.com/rodadas");
+
+        foreach ($rodadas as $rodada) {
+            DB::table('rodadas')
+                    ->where('rodada_id', $rodada['rodada_id'])
+                    ->update(['inicio' => explode(' ', $rodada['inicio'])[0], 'fim' => explode(' ', $rodada['fim'])[0]]);
+
+
+
+            $rodadasInfo = array('Abril' => array(1, 2, 3), 'Maio' => array(4, 5, 6, 7, 8), 'Jun/Jul' => array(9, 10, 11, 12, 13, 14, 15, 16),
+                'Agosto' => array(17, 18, 19, 20, 21), 'Setembro' => array(22, 23, 24, 25, 26, 27), 'Outubro' => array(28, 29, 30, 31), 'Novembro' => array(32, 33, 34, 35, 36, 37, 38));
+
+            $tabelaDevido = [];
+
+            foreach ($rodadasInfo as $key => $meses) {
+                $devidoMes = [];
+
+                foreach ($apostadores as $apostador) {
+                    $totalPontos = 0;
+                    $scoutApostador = [];
+                    foreach ($meses as $rodada) {
+
+                        if ($status['rodada_atual'] > $rodada) {
+                            $scoutRodada = $this->consulta('https://api.cartolafc.globo.com/time/slug/' . $apostador->slug_time . '/' . $rodada);
+
+                            $scoutApostador[$apostador->id] = $scoutRodada;
+                            $totalPontos = $totalPontos + $scoutRodada['pontos'];
+
+                            DB::table('pontos_rodada')
+                                    ->where('id_apostador', $apostador->id)
+                                    ->where('id_rodada', $rodada)
+                                    ->update(['id_rodada' => $rodada, 'id_apostador' => $apostador->id, 'pontos' => $scoutRodada['pontos'], 'ativo' => 1]);
+                        }
+                        $devidoMes[$key][$apostador->id] = $scoutRodada;
+                        $devidoMes[$key][$apostador->id]['pontuacaoMes'] = $totalPontos;
+                    }
+
+                    $tabelaDevido[$key] = array_values(array_sort($devidoMes[$key], function ($value) {
+                                return $value['pontuacaoMes'];
+                            }));
+                }
+            }
+        }
     }
 
 }
